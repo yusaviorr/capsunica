@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werebear & Căpșunica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a sleepy, tender bedtime story told in pixels
+   IDEA: a little handheld game screen showing tonight's chapter
+   PICTURE: Candy Mars at night: pink heli, infinite backpack, the whole pet crew
+   COLOUR and TYPE: night indigo, strawberry pink, gummy cyan; Pixelify Sans + Nunito
+   LAYOUT: modest title, big scene, story line and buttons under it */
+:root{color-scheme:dark;--bg:#120a2a;--ink:#f6e9ff;--soft:#c9b6e6;--pink:#ff7eb6;--cyan:#6ff4ff;--panel:#1d1140}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:radial-gradient(120% 80% at 50% 0%,#2a1356 0%,var(--bg) 60%);color:var(--ink);font:16px/1.55 Nunito,system-ui,sans-serif;overflow-x:clip;min-height:100vh}
+.wrap{max-width:1180px;margin:0 auto;padding:clamp(16px,3vw,40px) max(4vw,12px) 40px}
+h1{font:700 clamp(26px,4vw,44px)/1.05 "Pixelify Sans",monospace;margin:0 0 4px;text-wrap:balance}
+h1 span{color:var(--pink)}
+.sub{color:var(--soft);margin:0 0 16px}
+.screen{position:relative;border-radius:14px;padding:10px;background:linear-gradient(#3a1d6e,#24124a);box-shadow:0 0 0 2px #4b2a86,0 20px 60px #0008,inset 0 2px 0 #ffffff22}
+.fig{position:relative;aspect-ratio:16/9;width:100%;border-radius:6px;overflow:hidden;background:#120a2a;cursor:pointer}
+.fig canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+.tag{position:absolute;transform:translate(-50%,-100%);font:500 clamp(10px,1.3vw,14px)/1 "Pixelify Sans",monospace;background:#120a2acc;color:#fff;padding:3px 6px;border-radius:4px;white-space:nowrap;pointer-events:none;transition:opacity .3s}
+.tags-off .tag{opacity:0}
+.story{min-height:3.2em;margin:14px 2px 10px;font:500 clamp(17px,2vw,22px)/1.35 "Pixelify Sans",monospace;color:#ffe6f2;transition:opacity .5s}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:700 16px/1 Nunito,sans-serif;min-height:44px;padding:0 18px;border-radius:10px;border:0;cursor:pointer;color:#2a0f2e;background:var(--pink);box-shadow:0 4px 0 #b33c78}
+button.alt{background:#2e1a5c;color:var(--ink);box-shadow:0 4px 0 #170c33}
+button:active{transform:translateY(3px);box-shadow:0 1px 0 #b33c78}
+button:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+.count{margin-left:auto;font:500 18px "Pixelify Sans",monospace;color:var(--cyan)}
+.cast{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px 22px;margin:26px 0 0;padding:0;list-style:none;color:var(--soft);font-size:15px}
+.cast b{color:var(--ink)}
+@media(max-width:600px){.count{margin-left:0;width:100%}}
+@media(prefers-reduced-motion:reduce){.story{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Werebear &amp; <span>Căpșunica</span> on Candy Mars</h1>
+  <p class="sub">Tonight's bedtime chapter. Tap the scene to shake the infinite backpack.</p>
+  <div class="screen">
+    <div class="fig tags-off" id="fig">
+      <canvas id="cv" width="256" height="144" aria-label="Pixel art animation: Werebear and Căpșunica on a candy planet with their pets and Panda's pink helicopter"></canvas>
+    </div>
+  </div>
+  <p class="story" id="story">Tonight, Panda flew the pink helicopter all the way to Candy Mars…</p>
+  <div class="bar">
+    <button id="shake">Shake the backpack</button>
+    <button class="alt" id="names">Show names</button>
+    <button class="alt" id="pause">Pause</button>
+    <span class="count" id="count">sweets caught: 0</span>
+  </div>
+  <ul class="cast">
+    <li><b>Werebear</b> — big fluff, infinite backpack</li>
+    <li><b>Căpșunica</b> — red hair, strawberry beret, catches everything</li>
+    <li><b>Panda</b> — pilot of the pink helicopter</li>
+    <li><b>Rellow</b> — the goofy lizard, eyes in two directions</li>
+    <li><b>Normie lizard</b> — just vibing</li>
+    <li><b>Puiul meu</b> — pecks up the fallen sprinkles</li>
+    <li><b>Duck Duck</b> — merged with an old Mars rover</li>
+    <li><b>Magic fish</b> — lives in a rainbow bubble</li>
+  </ul>
+</div>
+<script id="scene">
+{
+const W=256,H=144,GY=130,HZ=96;
+const buf=new Uint8ClampedArray(W*H*4),bg=new Uint8ClampedArray(W*H*4);
+let T=buf;
+const hex=h=>{h=h.replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]};
+const PAL0={k:'#1a0f24',b:'#9a6640',B:'#6a4028',l:'#dcae7e',w:'#ffffff',e:'#120812',p:'#ff7eb6',P:'#d94a8c',r:'#ee3a55',R:'#a3203e',g:'#5ed47a',G:'#2f8a4c',y:'#ffd84a',Y:'#ff9a3a',v:'#9a5ae6',V:'#552a96',c:'#6ff4ff',C:'#2a86e0',s:'#f6c9a2',S:'#d9a07a',h:'#d63c1e',n:'#231c2a',q:'#a8a8c4',Q:'#6a6a88',m:'#ff5ae6',o:'#ffd23a',f:'#ff7a2a',t:'#4ad0a6',T:'#22806a',u:'#c8e64a',U:'#86a82a'};
+const PAL={};for(const k in PAL0)PAL[k]=hex(PAL0[k]);
+const CANDY=['#ff7eb6','#6ff4ff','#ffd84a','#b6f25a','#b07cff','#ff9a3a','#ff4f6d','#ffffff'].map(hex);
+const BAY=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>(v+.5)/16);
+const bay=(x,y)=>BAY[(y&3)*4+(x&3)];
+let seed=7;const rnd=()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const R=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.random()*a.length|0];
+const mix=(a,b,f)=>[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];
+function hsl(h,s,l){h=((h%360)+360)%360/360;const f=n=>{const k=(n+h*12)%12,a=s*Math.min(l,1-l);return 255*(l-a*Math.max(-1,Math.min(k-3,9-k,1)))};return[f(0),f(8),f(4)]}
+function put(x,y,c,a=1){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H||!c)return;const i=(y*W+x)*4;if(a>=1){T[i]=c[0];T[i+1]=c[1];T[i+2]=c[2]}else if(a>0){T[i]+=(c[0]-T[i])*a;T[i+1]+=(c[1]-T[i+1])*a;T[i+2]+=(c[2]-T[i+2])*a}T[i+3]=255}
+function rect(x,y,w,h,c,a){for(let j=0;j<h;j++)for(let i=0;i<w;i++)put(x+i,y+j,c,a)}
+function ell(cx,cy,rx,ry,cb){for(let y=Math.floor(cy-ry-1);y<=Math.ceil(cy+ry+1);y++)for(let x=Math.floor(cx-rx-1);x<=Math.ceil(cx+rx+1);x++){const nx=(x-cx)/(rx+.5),ny=(y-cy)/(ry+.5),d=nx*nx+ny*ny;if(d<=1)cb(x,y,nx,ny,d)}}
+function spr(rows,x,y,o={}){const w=Math.max(...rows.map(r=>r.length));x=Math.round(x);y=Math.round(y);for(let j=0;j<rows.length;j++){const r=rows[j];for(let i=0;i<r.length;i++){let ch=r[i];if(ch==='.')continue;if(o.map&&o.map[ch])ch=o.map[ch];const c=(o.cols&&o.cols[ch])||PAL[ch];if(!c)continue;const X=x+(o.flip?w-1-i:i),Y=y+j;if(o.clip&&!o.clip(X,Y))continue;put(X,Y,c,o.a??1)}}}
+
+/* ---------- sprites ---------- */
+const BEAR=["...kk..........kk...","..kBbk........kbBk..","..kBlbkkkkkkkkblBk..","...kbbbbbbbbbbbbk...","..kbbbbbbbbbbbbbbk..",".kbbbbbbbbbbbbbbbbk.",".kbbbwebbbbbbwebbbk.",".kbbbeebbbbbbeebbbk.",".kbbbbbllllllbbbbbk.",".kbpbblllkklllbbpbk.",".kbbbblkllllklbbbbk.","..kbbbblkppklbbbbk..","...kkbbbbbbbbbbkk...","...kbbbbbbbbbbbbk...","..kbbvbbbbbbbbvbbk..",".kbbbvbllllllbvbbbk.","kbbbbvllllllllvbbbbk","kbbkbvllllllllvbkbbk","kbbkbvllllllllvbkbbk","kbbkbbllllllllbbkbbk","kllk.kbllllllbk.kllk",".kk..kbbbbbbbbk..kk.",".....kbbbbbbbbk.....",".....kbbbkkbbbk.....",".....kbbbkkbbbk.....","....kBbbbkkbbbBk....","....kllllkkllllk....","....kkkkk..kkkkk...."];
+const PACK=["..kkkkkkkk..",".kmmmmmmmmk.","kVvvvvvvvvVk","kvvvvvvvvvvk","kvvoyvvvvvvk","kvvyovvvvvvk","kvvvvvvvvvvk","kVkkkkkkkkVk","kVvvvvvvvvVk","kVvvvoovvvVk","kVvvvvvvvvVk","kVVVVVVVVVVk",".kkkkkkkkkk."];
+const CAPS=[".........kk.........","......kkGggGkk......","....kkrGgGGgGrkk....","...krrrrrGGrrrrrk...","..krryrrrrrrrryrrk..","..krrrrryrrryrrrrk..",".khhkkkkkkkkkkkkhhk.",".khhsssssssssssshhk.",".khsssssssssssssshk.","khhsskwsssssskwsshhk","khhsskksssssskksshhk","khhspsssssssssspshhk","khhssssssRRsssssshhk","khhhhksssssssskhhhhk","khhhhhhksssskhhhhhhk","khhhkkppwwwwppkkhhhk","khhkppppprrpppppkhhk","kksppppppppppppppskk",".kskppppppppppppksk.",".kskppppppppppppksk.",".kskppppppppppppksk.",".kskppppppppppppksk.",".kskPPPPPPPPPPPPksk.",".kskpppwppppwpppksk.",".kssppppppppppppssk.","..kpppppwppwpppppk..","..kppppppppppppppk..",".kPppppppppppppppPk.",".kkkkkkkkkkkkkkkkkk.","......ksskkssk......","......ksskkssk......","......ksskkssk......","......ksskkssk......","......ksskkssk......","......ksskkssk......","......ksskkssk......",".....krrrkkrrrk.....",".....kkkkkkkkkk....."];
+const PANDA=[".kk....kk.","knnkkkknnk",".kwwwwwwk.","kwnnwwnnwk","kwnwwwwnwk","kwwwwwwwwk","kwwwnnwwwk",".kwwwwwwk.","..kkkkkk.."];
+const LIZ=["..........kkkkk...",".........kuuuuuk..","........kuuUuuuuk.","k......kuuuuuuuuk.","kuk...kuuuuuuuuuuk",".kuukkuuuuuuuuuukk","..kuuuuuuuuuuuuk..","...kUuUuUuuUuUk...","....kUkkkkkkUk....","....kk.....kk....."];
+const HENB=[".k........","kwk..kkk..","kwwkkwwwk.","kwwwwwwwwk","kwwqwwwwwk",".kwwqqwwk.","..kkwwwk..","...kYkY...","..YY.YY..."];
+const HENH=[".kRk...","krRrk..","kwwwk..","kwewkk.","kwwwyyk",".kRkk.."];
+const DUCK=["........kck.....",".........k......",".......kkkkk....","......kyyyyyk...","......kyyywek...","......kyyyyyYYk.",".kk...kyyyyykkk.","kyyk.kyyyyyyk...","kyyykyyYYYyyyk..","kyycyyYYYYcyyk..",".kccyyyyyccyk...","..kkkkkkkkkkk..."];
+const FISH=["....kkkk....","k..kffffkk..","kYkffyffffk.","kYYffffffwek","kYkffyffffk.","k..kffffkk..","....kkkk...."];
+const HEART=[".1.1.","11111",".111.","..1.."];
+const SW={candy:["2.111.2","221w122","2.111.2"],fish:["..111.1",".1e1111","..111.1"],lolli:[".1.","121",".1.",".w.",".w."],star:["..1..","11111",".111.",".1.1."],donut:[".222.","2w2w2","22.22","21112",".111."]};
+const HUT=["....kk....","..kkwwkk..",".kwwwwwwk.","kwwpwwwpwk","kbbbbbbbbk","kbBbbbbBbk","kbboobbbbk","kbbookkbbk","kbbbbkkbbk","kkkkkkkkkk"];
+
+/* ---------- static background ---------- */
+const stars=[];
+function grad(stops,y,x){for(let i=0;i<stops.length-1;i++){const[y0,c0]=stops[i],[y1,c1]=stops[i+1];if(y<=y1){const f=(y-y0)/(y1-y0);return f>bay(x,y)?c1:c0}}return stops[stops.length-1][1]}
+function drawBG(){
+  T=bg;
+  const sky=[[0,'#120a2a'],[28,'#22104c'],[52,'#45186a'],[72,'#82287e'],[86,'#d24c80'],[97,'#ff9488']].map(([a,b])=>[a,hex(b)]);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)put(x,y,grad(sky,y,x));
+  for(let i=0;i<95;i++)stars.push({x:rnd()*W|0,y:rnd()*78|0,p:rnd()*6.3,s:.05+rnd()*.12,big:rnd()<.08,c:rnd()<.25?pick(CANDY):PAL.w});
+  // moons
+  const ML=hex('#d9c9f2'),MD=hex('#8f7cb8');
+  ell(34,18,6,6,(x,y,nx,ny)=>put(x,y,(nx*.8+ny*.4)>.25+bay(x,y)*.5?MD:ML));
+  [[32,16,1.2],[37,20,1],[31,21,.8]].forEach(([x,y,r])=>ell(x,y,r,r,(a,b)=>put(a,b,MD)));
+  ell(56,9,2,2,(x,y,nx)=>put(x,y,nx>.3?MD:ML));
+  // strawberry-ice-cream planet with sprinkle ring
+  const PX=216,PY=30;
+  const ring=(front)=>{for(let y=PY-6;y<=PY+6;y++)for(let x=PX-24;x<=PX+24;x++){const ox=(x-PX)/23,oy=(y-PY)/5,ix=(x-PX)/16,iy=(y-PY)/3.2;if(ox*ox+oy*oy<=1&&ix*ix+iy*iy>1&&((y>=PY)===front)){const h=(x*7+y*13)%11;put(x,y,h<3?CANDY[(x+y)&7]:hex(h<7?'#ffe6c8':'#f3c6a8'))}}};
+  ring(false);
+  const B1=hex('#ff8cc0'),B2=hex('#ffd6e8'),B3=hex('#e4579a'),BD=hex('#a0306e');
+  ell(PX,PY,12,12,(x,y,nx,ny)=>{const band=((y-PY+Math.round(2*Math.sin(x/3)))+30)>>2;let c=[B1,B2,B3][band%3];if(nx*.7+ny*.5>.25+bay(x,y)*.45)c=mix(c,BD,.55);if(nx*.7+ny*.5<-.55)c=mix(c,PAL.w,.4);put(x,y,c)});
+  ring(true);
+  // far mesas
+  const M1=hex('#4a1650'),M2=hex('#6c2466');
+  for(let x=0;x<W;x++){let top=82+5*Math.sin(x*.045+1)+3*Math.sin(x*.13);top=Math.round(top/3)*3;for(let y=top;y<HZ+4;y++)put(x,y,y===top?M2:M1);for(let y=top;y<top+4;y++)put(x,y,hex('#ff9488'),.12)}
+  // cupcake mountain
+  const CX=166;
+  for(let j=0;j<11;j++){const hw=13+j*.6;for(let i=-hw;i<=hw;i++)put(CX+i,86+j,((Math.round(i)+40)>>1)%2?hex('#9a4a86'):hex('#b6609c'))}
+  ell(CX,84,19,7,(x,y,nx,ny)=>put(x,y,ny>.6?hex('#c47ab0'):hex('#e7a2cc')));
+  ell(CX,76,12,6,(x,y,nx,ny)=>put(x,y,ny>.6?hex('#c47ab0'):hex('#f0b6d8')));
+  for(let i=0;i<26;i++){const a=rnd()*6.28,r=rnd();put(CX+Math.cos(a)*r*16,81+Math.sin(a)*r*6-(r<.5?4:0),CANDY[i%7],.8)}
+  ell(CX,68,2.5,2.5,(x,y,nx,ny)=>put(x,y,nx+ny<-.6?hex('#ff9aa8'):hex('#e0405e')));rect(CX,63,1,3,hex('#2f8a4c'));
+  // gingerbread hut on the hill
+  spr(HUT,122,87);
+  // ground
+  const gr=[[92,'#9a2e5c'],[106,'#bf4469'],[124,'#d65672'],[144,'#e8687c']].map(([a,b])=>[a,hex(b)]);
+  for(let x=0;x<W;x++){const top=Math.round(95+2*Math.sin(x*.07+2)+1.5*Math.sin(x*.21));for(let y=top;y<H;y++){let c=grad(gr,y,x);const n=rnd();if(n<.05)c=mix(c,hex('#7a2050'),.5);else if(n<.08)c=mix(c,hex('#ffb0b0'),.45);put(x,y,c)}put(x,top,hex('#e0607a'))}
+  // craters
+  [[34,112,11,3],[224,138,15,4],[92,141,9,2],[200,104,8,2]].forEach(([cx,cy,rx,ry])=>ell(cx,cy,rx,ry,(x,y,nx,ny)=>put(x,y,ny>.55?hex('#f58a96'):ny<-.4?hex('#7e2050'):hex('#a8325e'))));
+  // lollipop trees
+  const lolli=(x,top,len,r,a,b)=>{rect(x,top,2,len,hex('#f4eaf0'));rect(x+1,top,1,len,hex('#c9b6c8'));const cy=top-r+1;ell(x+1,cy,r+1,r+1,(X,Y)=>put(X,Y,PAL.k));ell(x+1,cy,r,r,(X,Y,nx,ny)=>{const ang=Math.atan2(ny,nx),rr=Math.hypot(nx,ny);const s=((ang/6.283+rr*2.2)%1+1)%1;let c=s<.5?a:b;if(nx+ny>.7)c=mix(c,PAL.k,.25);put(X,Y,c)});put(x-r*.4,cy-r*.45,PAL.w);put(x-r*.4+1,cy-r*.45,PAL.w,.6)};
+  lolli(18,104,26,8,hex('#ff5aa8'),hex('#fff0f6'));
+  lolli(244,108,22,10,hex('#6ff4ff'),hex('#b07cff'));
+  lolli(60,99,8,4,hex('#ffd84a'),hex('#ff7a2a'));
+  // candy cane
+  for(let y=108;y<122;y++)for(let i=0;i<2;i++)put(88+i,y,((y+i)>>1)%2?PAL.r:PAL.w);
+  for(let a=0;a<=Math.PI;a+=.15){for(let t=0;t<2;t++){const x=Math.round(91-Math.cos(a)*(2.5+t*.9)),y=Math.round(108-Math.sin(a)*(2.5+t*.9));put(x,y,(Math.round(a*3))%2?PAL.r:PAL.w)}}
+  // gumdrops
+  [[8,138,4,'#ff4f6d'],[60,140,3,'#6ff4ff'],[122,141,3,'#ffd84a'],[160,139,4,'#b6f25a'],[240,130,3,'#b07cff'],[46,104,2,'#ff9a3a'],[140,100,2,'#ff7eb6'],[188,140,3,'#ff9a3a'],[100,104,2,'#6ff4ff']].forEach(([x,y,r,c])=>{const C=hex(c);ell(x,y,r+1,r+1,(X,Y)=>{if(Y<=y)put(X,Y,PAL.k)});ell(x,y,r,r,(X,Y,nx,ny)=>{if(Y<=y)put(X,Y,nx+ny<-.7?mix(C,PAL.w,.6):nx>.4?mix(C,PAL.k,.3):C)})});
+  T=buf;
+}
+
+/* ---------- state ---------- */
+const parts=[],landed=[],hearts=[],sparks=[];
+let n=0,caught=0,capHop=0,shoot=null,henX=172,henPeck=0,duckX=198,lastDuck=198;
+function spawn(dir){parts.push({x:100+R(-3,3),y:106,vx:dir<0?R(-1.4,-.4):R(.55,1.6),vy:R(-2.9,-2.0),type:pick(['candy','fish','fish','lolli','star','donut']),c1:pick(CANDY),c2:pick(CANDY),ly:R(GY-2,GY+11)});for(let i=0;i<2;i++)sparks.push({x:100+R(-5,5),y:106+R(-3,1),l:0,m:R(6,12)})}
+function burst(){for(let i=0;i<14;i++)spawn(Math.random()<.3?-1:1)}
+function tick(){
+  n++;
+  if(n%7===0)spawn(1);
+  for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.vy+=.12;p.x+=p.vx;p.y+=p.vy;
+    if(p.vy>0&&p.x>133&&p.x<155&&p.y>108&&p.y<124){caught++;capHop=4;hearts.push({x:p.x,y:p.y-4,l:0,c:pick([PAL.p,PAL.r,PAL.m])});for(let k=0;k<3;k++)sparks.push({x:p.x+R(-4,4),y:p.y+R(-4,4),l:0,m:R(6,10)});parts.splice(i,1);continue}
+    if(p.vy>0&&p.y>=p.ly){p.y=p.ly;p.age=0;landed.push(p);parts.splice(i,1)}}
+  for(let i=landed.length-1;i>=0;i--)if(++landed[i].age>260)landed.splice(i,1);
+  while(landed.length>40)landed.shift();
+  for(let i=hearts.length-1;i>=0;i--){const h=hearts[i];h.l++;h.y-=.45;h.x+=Math.sin(h.l*.25)*.3;if(h.l>45)hearts.splice(i,1)}
+  for(let i=sparks.length-1;i>=0;i--)if(++sparks[i].l>sparks[i].m)sparks.splice(i,1);
+  if(n%55===0)hearts.push({x:126,y:104,l:0,c:PAL.p});
+  if(capHop>0)capHop--;
+  if(n%150===40)shoot={x:R(90,230),y:R(4,24),l:0};
+  if(shoot&&++shoot.l>22)shoot=null;
+  // hen walks to nearest fallen sweet and pecks it
+  let tgt=null,best=99;for(const c of landed){const bx=c.x-14;if(c.x>158&&c.x<200&&Math.abs(bx-henX)<best){best=Math.abs(bx-henX);tgt=c}}
+  if(henPeck>0){henPeck--;if(henPeck===2&&tgt&&Math.abs(tgt.x-(henX+14))<5){landed.splice(landed.indexOf(tgt),1);sparks.push({x:henX+14,y:tgt.y-2,l:0,m:8})}}
+  else if(tgt&&Math.abs((tgt.x-14)-henX)>1)henX+=Math.sign(tgt.x-14-henX)*.35;
+  else if(n%30===0||tgt)henPeck=5;
+  henX=Math.max(158,Math.min(184,henX));
+  lastDuck=duckX;duckX=206+9*Math.sin(n*.018);
+}
+
+/* ---------- frame ---------- */
+function star4(x,y,s,c,a=1){put(x,y,PAL.w,a);for(let i=1;i<=s;i++){const f=a*(1-i/(s+1));put(x+i,y,c,f);put(x-i,y,c,f);put(x,y+i,c,f);put(x,y-i,c,f)}}
+function render(){
+  buf.set(bg);T=buf;const t=n;
+  for(const s of stars){const b=.35+.65*(.5+.5*Math.sin(t*s.s+s.p));if(s.big)star4(s.x,s.y,b>.8?2:1,s.c,b);else put(s.x,s.y,s.c,b)}
+  if(shoot){for(let i=0;i<9;i++)put(shoot.x-shoot.l*3+i*1.6,shoot.y+shoot.l*1.1-i*.6,PAL.w,(1-i/9)*(1-shoot.l/22))}
+  // hut window flicker + chimney smoke heart
+  const fl=.7+.3*Math.sin(t*.7)*Math.sin(t*.31);rect(124,93,2,2,mix(PAL.Y,PAL.y,fl));
+  // helicopter
+  const hx=Math.round(30+6*Math.sin(t*.012)),hy=Math.round(36+2*Math.sin(t*.15));
+  const PK=PAL.p,PKL=hex('#ffb6da'),PKD=PAL.P,OUT=hex('#5a1438');
+  rect(hx-16,hy+8,24,5,OUT);rect(hx-16,hy+9,24,3,PK);rect(hx-16,hy+11,24,1,PKD);
+  rect(hx-19,hy+2,5,11,OUT);rect(hx-18,hy+3,3,9,PK);rect(hx-18,hy+6,3,2,PAL.w);
+  const ta=t*1.3;for(let i=-3;i<=3;i++)put(hx-16+Math.round(Math.cos(ta)*i),hy+3+Math.round(Math.sin(ta)*i),PAL.Q);put(hx-16,hy+3,PAL.k);
+  const bx=hx+18,by=hy+10;
+  ell(bx,by,15,9,(x,y)=>put(x,y,OUT));
+  ell(bx,by,14,8,(x,y,nx,ny,d)=>put(x,y,ny>.5?PKD:(nx<-.25&&ny<-.25&&d>.45?PKL:PK)));
+  const wx=hx+25,wy=hy+8,inWin=(x,y)=>{const a=(x-wx)/7.5,b=(y-wy)/5.5;return a*a+b*b<=1};
+  ell(wx,wy,8,6,(x,y)=>put(x,y,OUT));
+  ell(wx,wy,7,5,(x,y,nx,ny)=>put(x,y,ny>.35?hex('#3ab0d9'):hex('#8ff0ff')));
+  spr(PANDA,wx-5,wy-4,{clip:inWin});
+  if(Math.floor(t/45)%6===5){rect(wx-3,wy,2,1,PAL.n);rect(wx+2,wy,2,1,PAL.n)}
+  put(wx-3,wy-1,PAL.w);put(wx+2,wy-1,PAL.w);
+  rect(wx+3,wy+3,3,1,PAL.w);ell(wx+7,wy+2,1.4,1.4,(x,y,nx)=>put(x,y,nx<0?PAL.p:PAL.w));
+  put(wx-5,wy-3,PAL.w,.7);put(wx-4,wy-4,PAL.w,.7);put(wx+4,wy-4,PAL.w,.4);
+  spr(HEART,hx+7,hy+9,{cols:{'1':PAL.r}});put(hx+8,hy+9,PAL.w);
+  put(hx+32,hy+11,(t>>3)%2?PAL.r:PAL.g);
+  rect(hx+17,hy-1,3,3,PAL.Q);rect(hx+18,hy-2,1,1,PAL.k);
+  const L1=Math.abs(Math.cos(t*.9))*25,L2=Math.abs(Math.sin(t*.9))*25;
+  for(let i=-25;i<=25;i++)put(hx+18+i,hy-2,PAL.q,.18);
+  for(let i=-L1;i<=L1;i++)put(hx+18+i,hy-2,PAL.Q);
+  for(let i=-L2;i<=L2;i+=2)put(hx+18+i,hy-3,PAL.q,.5);
+  rect(hx+10,hy+17,1,3,PAL.Q);rect(hx+25,hy+17,1,3,PAL.Q);rect(hx+5,hy+20,27,1,PAL.k);rect(hx+5,hy+19,1,1,PAL.k);rect(hx+32,hy+19,1,1,PAL.k);
+  if(t%18===0)hearts.push({x:hx-20,y:hy+6,l:12,c:PKL});
+  // magic fish in a bubble
+  const fx=178,fy=Math.round(86+3*Math.sin(t*.07)),sw=Math.sin(t*.05)*4,dir=Math.cos(t*.05)>=0;
+  ell(fx,fy,11,11,(x,y,nx,ny,d)=>put(x,y,PAL.c,d>.82?.55:.12));
+  const hu=t*6;spr(FISH,fx-6+sw,fy-3,{flip:!dir,cols:{f:hsl(hu,1,.62),Y:hsl(hu+150,1,.6),y:hsl(hu+60,1,.8)}});
+  put(fx-6,fy-7,PAL.w);put(fx-7,fy-6,PAL.w);put(fx-5,fy-8,PAL.w,.6);
+  for(let i=0;i<3;i++){const p=(t*.4+i*9)%26;put(fx+Math.sin(p*.5+i)*2+i*2-2,fy-12-p,PAL.c,1-p/26)}
+  if(t%5===0)sparks.push({x:fx+R(-13,13),y:fy+R(-13,13),l:0,m:8,c:hsl(hu,1,.75)});
+  // fallen sweets
+  for(const p of landed)drawSweet(p,p.age>220?(260-p.age)/40:1);
+  // shadows
+  const sh=(x,w)=>ell(x,GY,w,1.5,(X,Y)=>put(X,Y,PAL.k,.3));
+  sh(114,9);sh(144,9);sh(49,8);sh(73,8);sh(henX+6,5);sh(duckX+8,9);
+  // Rellow (goofy) and the normie lizard
+  const hop=[0,2,3,3,2,0][(t%90)]||0;
+  const rx=40,ry=GY-9-hop;
+  spr(LIZ,rx,ry);
+  const tl=2+Math.round(2+2*Math.sin(t*.5));for(let i=0;i<tl;i++)put(rx+18+i,ry+5,PAL.p);put(rx+18+tl,ry+4,PAL.p);put(rx+18+tl,ry+6,PAL.p);
+  [[rx+10,ry-1,.3,0],[rx+14,ry-1,.53,2]].forEach(([ex,ey,sp,ph])=>{ell(ex,ey,2.2,2.2,(x,y)=>put(x,y,PAL.k));ell(ex,ey,1.4,1.4,(x,y)=>put(x,y,PAL.w));put(ex+Math.round(Math.cos(t*sp+ph)),ey+Math.round(Math.sin(t*sp*1.3+ph)),PAL.e)});
+  const nx0=64,ny0=GY-9;
+  spr(LIZ,nx0,ny0,{flip:true,map:{u:'t',U:'T'}});
+  const nb=t%110<4;put(nx0+3,ny0+2,nb?PAL.T:PAL.e);put(nx0+4,ny0+2,nb?PAL.T:PAL.w);rect(nx0+2,ny0+1,3,1,PAL.T);
+  // hen (puiul meu)
+  const hX=Math.round(henX),hY=GY-8;
+  spr(HENB,hX,hY);
+  if(henPeck>1)spr(HENH,hX+8,hY+1);else spr(HENH,hX+5,hY-4);
+  // Duck Duck + rover
+  const dX=Math.round(duckX),dY=GY-17,dflip=duckX<lastDuck;
+  spr(DUCK,dX,dY,{flip:dflip,cols:{c:mix(PAL.c,PAL.w,.5+.5*Math.sin(t*.6))}});
+  rect(dX+1,dY+12,14,2,PAL.q);rect(dX+1,dY+13,14,1,PAL.Q);rect(dX,dY+11,16,1,PAL.k);
+  [3,8,13].forEach(o=>{const cx=dX+o,cy=dY+15;ell(cx,cy,2,2,(x,y)=>put(x,y,PAL.k));ell(cx,cy,1.2,1.2,(x,y)=>put(x,y,PAL.Q));const a=-duckX/2;put(cx+Math.round(Math.cos(a)),cy+Math.round(Math.sin(a)),PAL.q)});
+  for(let i=0;i<3;i++)if(Math.random()<.5)put(dX+R(0,16),dY+R(0,13),pick([PAL.c,PAL.y,PAL.w]),.9);
+  if(t%40<4){let x=dX+(dflip?7:9),y=dY;for(let i=0;i<5;i++){const nx=x+R(-2,2),ny=y-2;put(nx,ny,PAL.c);put((x+nx)/2,y-1,PAL.w);x=nx;y=ny}}
+  // backpack glow + backpack + Werebear
+  const bob=Math.floor(t/10)%2,bxp=95,byp=106+bob;
+  ell(bxp+6,byp+1,11,8,(x,y,nx,ny,d)=>put(x,y,PAL.m,(1-d)*.25*(.7+.3*Math.sin(t*.3))));
+  spr(BEAR.slice(22),104,GY-6);
+  spr(PACK,bxp,byp);
+  for(let i=0;i<8;i++)put(bxp+2+i,byp+1,hsl(t*12+i*40,1,.65));
+  spr(BEAR.slice(0,22),104,GY-28+bob);
+  if(t%95<3){rect(109,GY-22+bob,2,2,PAL.b);rect(117,GY-22+bob,2,2,PAL.b);rect(109,GY-21+bob,2,1,PAL.k);rect(117,GY-21+bob,2,1,PAL.k)}
+  // Căpșunica
+  const cb=Math.floor((t+5)/10)%2,ch=capHop>0?2:0,cy0=GY-38-ch;
+  spr(CAPS.slice(29),134,cy0+29);
+  spr(CAPS.slice(0,29),134,cy0+cb);
+  if(t%80<3){[[139],[147]].forEach(([x])=>{rect(x,cy0+cb+9,2,2,PAL.s);rect(x,cy0+cb+10,2,1,PAL.k)})}
+  for(const sd of[[139,3],[147,4],[142,5]])if((t+sd[0])%24<3)put(sd[0],cy0+sd[1]+cb,PAL.w);
+  // flying sweets, hearts, sparkles
+  for(const p of parts)drawSweet(p,1);
+  for(const h of hearts)spr(HEART,h.x-2,h.y,{cols:{'1':h.c},a:Math.min(1,(45-h.l)/15)});
+  for(const s of sparks){const f=1-s.l/s.m;star4(Math.round(s.x),Math.round(s.y),f>.5?2:1,s.c||PAL.y,f)}
+  return{hx,hy,fx,fy,hop,dX,hX};
+}
+function drawSweet(p,a){const S=SW[p.type];spr(S,p.x-S[0].length/2,p.y-S.length/2,{cols:{'1':p.c1,'2':p.c2},a})}
+
+drawBG();
+globalThis.__scene={tick,render,buf,W,H,burst};
+
+if(typeof document!=='undefined'){
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),img=ctx.createImageData(W,H),fig=document.getElementById('fig');
+  const tags=[['Werebear'],['Căpșunica'],['Panda'],['Rellow'],['Normie'],['Puiul meu'],['Duck Duck'],['Magic fish']].map(([s])=>{const d=document.createElement('div');d.className='tag';d.textContent=s;fig.appendChild(d);return d});
+  const place=(d,x,y)=>{d.style.left=(x/W*100)+'%';d.style.top=(y/H*100)+'%'};
+  let paused=false,acc=0,last=performance.now();
+  const lines=["Tonight, Panda flew the pink helicopter all the way to Candy Mars…","Werebear opened his infinite backpack — and the sweets just kept coming.","Căpșunica caught the fish-fish candies one by one, red hair flying.","Rellow tried to lick the strawberry planet. Both eyes looked in different directions.","The normie lizard just sat there. Vibing. As usual.","Puiul meu found every sprinkle that fell on the sugar sand.","Duck Duck swallowed an old Mars rover and now he has wheels.","The magic fish blew a rainbow bubble big enough to sleep in.","And when the backpack was finally quiet… noapte bună, Căpșunica."];
+  let li=0;const story=document.getElementById('story');
+  setInterval(()=>{if(paused)return;story.style.opacity=0;setTimeout(()=>{li=(li+1)%lines.length;story.textContent=lines[li];story.style.opacity=1},500)},5500);
+  const count=document.getElementById('count');
+  function frame(now){acc+=Math.min(200,now-last);last=now;let r=null;if(!paused){while(acc>=50){tick();acc-=50;r=true}}else acc=0;
+    if(r||!frame.once){frame.once=1;const s=render();img.data.set(buf);ctx.putImageData(img,0,0);count.textContent='sweets caught: '+caught;
+      place(tags[0],114,99);place(tags[1],144,89-(capHop?2:0));place(tags[2],s.hx+18,s.hy-4);place(tags[3],49,118-s.hop);place(tags[4],73,119);place(tags[5],s.hX+7,115);place(tags[6],s.dX+8,111);place(tags[7],s.fx,s.fy-12)}
+    requestAnimationFrame(frame)}
+  requestAnimationFrame(frame);
+  fig.addEventListener('click',burst);
+  document.getElementById('shake').onclick=burst;
+  const nb=document.getElementById('names');nb.onclick=()=>{const off=fig.classList.toggle('tags-off');nb.textContent=off?'Show names':'Hide names'};
+  const pb=document.getElementById('pause');pb.onclick=()=>{paused=!paused;pb.textContent=paused?'Play':'Pause'};
+}
+}
+</script>
+</body>
+</html>
